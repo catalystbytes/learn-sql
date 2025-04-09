@@ -1,0 +1,252 @@
+SQL Subqueries & CTEs Tutorial
+🔹 Section Introduction
+Start with understanding the importance of subqueries and Common Table Expressions (CTEs) in SQL. These tools help break down complex queries into simpler, reusable blocks.
+
+🟩 Subquery Basics
+Concept: A subquery is a query nested inside another query.
+Used in: SELECT, FROM, WHERE, HAVING clauses.
+
+Example:
+
+sql
+Copy
+Edit
+SELECT name
+FROM employees
+WHERE department_id = (SELECT id FROM departments WHERE name = 'Sales');
+🟦 Subqueries in the SELECT Clause
+Concept: You can use a subquery to return a value for each row in the SELECT clause.
+
+Example:
+
+sql
+Copy
+Edit
+SELECT name,
+       (SELECT COUNT(*) FROM sales WHERE sales.employee_id = employees.id) AS total_sales
+FROM employees;
+📝 ASSIGNMENT: Subqueries in the SELECT Clause
+Task: List products with their average rating from a reviews table.
+
+Tables:
+
+products(id, name)
+
+reviews(product_id, rating)
+
+✅ SOLUTION:
+sql
+Copy
+Edit
+SELECT name,
+       (SELECT AVG(rating) FROM reviews WHERE reviews.product_id = products.id) AS avg_rating
+FROM products;
+🔁 Multiple Subqueries
+Use multiple subqueries to compute different values in a query.
+
+Example:
+
+sql
+Copy
+Edit
+SELECT name,
+       (SELECT COUNT(*) FROM sales WHERE sales.employee_id = employees.id) AS total_sales,
+       (SELECT AVG(amount) FROM sales WHERE sales.employee_id = employees.id) AS avg_sale
+FROM employees;
+📝 ASSIGNMENT: Subqueries in the FROM Clause
+Task: Use a subquery to calculate average monthly sales, then get months above average.
+
+✅ SOLUTION:
+sql
+Copy
+Edit
+SELECT *
+FROM (
+    SELECT month, SUM(amount) AS total_sales
+    FROM sales
+    GROUP BY month
+) AS monthly_sales
+WHERE total_sales > (SELECT AVG(total_sales) FROM (
+    SELECT SUM(amount) AS total_sales
+    FROM sales
+    GROUP BY month
+) AS all_months);
+🔎 Subqueries in WHERE & HAVING Clauses
+Example (WHERE):
+
+sql
+Copy
+Edit
+SELECT name
+FROM employees
+WHERE id IN (SELECT employee_id FROM sales WHERE amount > 1000);
+Example (HAVING):
+
+sql
+Copy
+Edit
+SELECT department_id, COUNT(*) AS num_employees
+FROM employees
+GROUP BY department_id
+HAVING COUNT(*) > (SELECT AVG(num_employees) FROM (
+    SELECT department_id, COUNT(*) AS num_employees
+    FROM employees
+    GROUP BY department_id
+) AS dept_counts);
+🔄 ANY vs ALL
+ANY: True if any value in the list makes the condition true.
+
+ALL: True if all values must meet the condition.
+
+Example:
+
+sql
+Copy
+Edit
+-- ANY
+SELECT name FROM employees
+WHERE salary > ANY (SELECT salary FROM employees WHERE department_id = 3);
+
+-- ALL
+SELECT name FROM employees
+WHERE salary > ALL (SELECT salary FROM employees WHERE department_id = 3);
+✅ EXISTS and Correlated Subqueries
+EXISTS: Checks if a subquery returns rows.
+Correlated Subquery: Depends on outer query row-by-row.
+
+Example:
+
+sql
+Copy
+Edit
+SELECT name
+FROM employees e
+WHERE EXISTS (
+    SELECT 1 FROM sales s WHERE s.employee_id = e.id
+);
+📝 ASSIGNMENT: Subqueries in the WHERE Clause
+Task: Show customers who have placed an order.
+
+✅ SOLUTION:
+sql
+Copy
+Edit
+SELECT name
+FROM customers
+WHERE id IN (SELECT customer_id FROM orders);
+📘 Common Table Expressions (CTEs)
+CTEs use the WITH keyword and make queries more readable.
+
+Example:
+
+sql
+Copy
+Edit
+WITH top_sales AS (
+    SELECT employee_id, SUM(amount) AS total
+    FROM sales
+    GROUP BY employee_id
+)
+SELECT employee_id FROM top_sales WHERE total > 10000;
+🔄 Subqueries vs CTEs
+Subqueries are inline.
+
+CTEs improve readability and modularity.
+
+Use CTEs when reusing logic or breaking down steps.
+
+🔁 Referencing a CTE Multiple Times
+CTEs can be reused in the same query.
+
+sql
+Copy
+Edit
+WITH monthly_sales AS (
+    SELECT month, SUM(amount) AS total
+    FROM sales
+    GROUP BY month
+)
+SELECT * FROM monthly_sales WHERE total > 10000;
+📝 ASSIGNMENT: CTEs
+Task: Use a CTE to find employees who made more than 5 sales.
+
+✅ SOLUTION:
+sql
+Copy
+Edit
+WITH sales_count AS (
+    SELECT employee_id, COUNT(*) AS sales
+    FROM sales
+    GROUP BY employee_id
+)
+SELECT employee_id FROM sales_count WHERE sales > 5;
+🔄 Multiple CTEs
+You can chain multiple CTEs.
+
+sql
+Copy
+Edit
+WITH dept_sales AS (
+    SELECT department_id, SUM(amount) AS total
+    FROM sales
+    GROUP BY department_id
+),
+high_sales AS (
+    SELECT * FROM dept_sales WHERE total > 50000
+)
+SELECT * FROM high_sales;
+📝 ASSIGNMENT: Multiple CTEs
+Task: Use two CTEs to find:
+
+Employees with >10 sales
+
+From those, who sold over 50k total
+
+✅ SOLUTION:
+sql
+Copy
+Edit
+WITH sales_count AS (
+    SELECT employee_id, COUNT(*) AS count
+    FROM sales
+    GROUP BY employee_id
+),
+total_sales AS (
+    SELECT employee_id, SUM(amount) AS total
+    FROM sales
+    GROUP BY employee_id
+)
+SELECT s.employee_id
+FROM sales_count s
+JOIN total_sales t ON s.employee_id = t.employee_id
+WHERE s.count > 10 AND t.total > 50000;
+🔁 Recursive CTEs
+Useful for hierarchical data like org charts or categories.
+
+sql
+Copy
+Edit
+WITH RECURSIVE org_chart AS (
+    SELECT id, name, manager_id
+    FROM employees
+    WHERE manager_id IS NULL
+    UNION ALL
+    SELECT e.id, e.name, e.manager_id
+    FROM employees e
+    JOIN org_chart o ON e.manager_id = o.id
+)
+SELECT * FROM org_chart;
+📊 Subqueries vs CTEs vs Temp Tables vs Views
+Feature	Subquery	CTE	Temp Table	View
+Inline	✅	✅	❌	❌
+Reusable	❌	✅	✅	✅
+Persisted	❌	❌	✅	✅
+Performance	Good for small tasks	Good for readable logic	Great for large data	Great for reusability
+✅ Key Takeaways
+Use subqueries for simple, inline logic.
+
+Use CTEs for readable and modular queries.
+
+Know when to use EXISTS, IN, ANY, ALL, and correlated subqueries.
+
+For large tasks: consider temp tables or views.
